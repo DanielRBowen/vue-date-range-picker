@@ -1,22 +1,25 @@
 <template>
   <div class="d-flex daterangepicker-row">
+
     <!-- Calendars -->
-    <div class="daterangepicker-col" v-for="calendarIndex in calendarCount" :key="calendarIndex">
-      <date-range-picker-calendar
-        :calendarIndex="calendarIndex"
-        :calendarCount="calendarCount"
-        :month="month"
-        :startDate="startDate"
-        :endDate="endDate"
-        :compare="compare"
-        :startDateCompare="startDateCompare"
-        :endDateCompare="endDateCompare"
-        :step="step"
-        v-on:goToPrevMonth="goToPrevMonth"
-        v-on:goToNextMonth="goToNextMonth"
-        v-on:selectDate="selectDate"
-        v-on:nextStep="nextStep"
-      />
+    <div v-if="showCalendars === true" class="d-flex">
+      <div class="daterangepicker-col" v-for="calendarIndex in calendarCount" :key="calendarIndex">
+        <date-range-picker-calendar
+          :calendarIndex="calendarIndex"
+          :calendarCount="calendarCount"
+          :month="month"
+          :startDate="startDate"
+          :endDate="endDate"
+          :compare="compare"
+          :startDateCompare="startDateCompare"
+          :endDateCompare="endDateCompare"
+          :step="step"
+          v-on:goToPrevMonth="goToPrevMonth"
+          v-on:goToNextMonth="goToNextMonth"
+          v-on:selectDate="selectDate"
+          v-on:nextStep="nextStep"
+        />
+      </div>
     </div>
 
     <!-- Right form -->
@@ -74,21 +77,21 @@
         </div>
       </div>
       <div class="form-group form-inline justify-content-end mb-0">
-        <button type="button" class="btn btn-light" @click="cancel">Cancel</button>
-        <button type="button" class="btn btn-primary ml-2" :disabled="step != null" @click="submit">Submit</button>
+        <button type="button" class="btn btn-light" @click="cancel" v-if="showCalendars === true">Cancel</button>
+        <button type="button" class="btn btn-primary ml-2" :disabled="step != null" @click="submit" v-if="autoSubmit === false">Submit</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import moment from 'moment'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCaretRight } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import DateRangePickerCalendar from './DateRangePickerCalendar'
+import FontAwesomeIcon from '@fortawesome/vue-fontawesome'
+import fontawesome from '@fortawesome/fontawesome'
+import faCaretRight from '@fortawesome/fontawesome-free-solid/faCaretRight'
+import moment from 'moment'
 
-library.add(faCaretRight)
+fontawesome.library.add(faCaretRight)
 
 export default {
   props: {
@@ -104,26 +107,60 @@ export default {
       type: Object,
       default: function() {
         return {
-          currentMonth: {
-            label: 'Current month',
+           today: {
+            label: 'Today',
+            startDate: moment.utc(),
+            endDate: moment.utc().endOf('day')
+          },
+          yesterday: {
+            label: 'Yesterday',
+            startDate: moment.utc().subtract(1, 'days'),
+            endDate: moment.utc().subtract(1, 'days').endOf('day')
+          },
+          thisWeek: {
+            label: 'This Week',
+            startDate: moment.utc().startOf('week'),
+            endDate: moment.utc().endOf('week').startOf('day')
+          },
+          last7Days: {
+            label: 'Last 7 Days',
+            startDate: moment.utc().subtract(7, 'days'),
+            endDate: moment.utc().endOf('day')
+          },
+          thisMonth: {
+            label: 'This Month',
             startDate: moment.utc().startOf('month'),
             endDate: moment.utc().endOf('month').startOf('day')
           },
           lastMonth: {
-            label: 'Last month',
+            label: 'Last Month',
             startDate: moment.utc().subtract(1, 'month').startOf('month'),
             endDate: moment.utc().subtract(1, 'month').endOf('month').startOf('day')
+          },
+          thisYear: {
+            label: 'This Year',
+            startDate: moment.utc().startOf('year'),
+            endDate: moment.utc().endOf('year').startOf('day')
+          },
+          lastYear: {
+            label: 'Last Year',
+            startDate: moment.utc().subtract(1, 'year').startOf('year'),
+            endDate: moment.utc().subtract(1, 'year').endOf('year').startOf('day')
           }
         }
       }
     },
     defaultRangeSelect: {
       type: String,
-      default: 'currentMonth'
+      default: 'thisMonth'
     },
     defaultRangeSelectCompare: {
       type: String,
       default: 'lastMonth'
+    },
+    autoSubmit: {
+      type: Boolean,
+      default: false
     }
   },
   data: () => {
@@ -136,7 +173,8 @@ export default {
       rangeSelectCompare: null,
       compare: false,
       month: moment.utc().subtract(1, 'month').startOf('month'),
-      step: null
+      step: null,
+      showCalendars: false
     }
   },
   computed: {
@@ -145,10 +183,10 @@ export default {
     },
     // For multi prop watchers
     range: function() {
-      return (this.startDate, this.endDate)
+      return this.startDate, this.endDate
     },
     rangeCompare: function() {
-      return (this.startDateCompare, this.endDateCompare)
+      return this.startDateCompare, this.endDateCompare
     }
   },
   methods: {
@@ -164,7 +202,7 @@ export default {
       // Predefined ranges
       for (const _rangeKey of Object.keys(this.ranges)) {
         const range = this.ranges[_rangeKey]
-        if (rangeKey === _rangeKey) {
+        if (rangeKey == _rangeKey) {
           predefinedRange = true
 
           if (!this.startDate.isSame(range.startDate)) {
@@ -176,11 +214,17 @@ export default {
         }
       }
 
+
       // Custom range
       if (!predefinedRange && this.step == null) {
         this.step = 'selectStartDate'
         this.$refs.startDate.focus()
+      } else {
+        if (this.autoSubmit === true && this.rangeSelect !== 'custom') {
+          this.submit();
+        }
       }
+
     },
     selectRangeCompare: function(rangeKey) {
       let predefinedRange = false
@@ -188,7 +232,7 @@ export default {
       // Predefined ranges
       for (const _rangeKey of Object.keys(this.ranges)) {
         const range = this.ranges[_rangeKey]
-        if (rangeKey === _rangeKey) {
+        if (rangeKey == _rangeKey) {
           predefinedRange = true
 
           if (!this.startDateCompare.isSame(range.startDate)) {
@@ -201,41 +245,45 @@ export default {
       }
 
       // Custom range
-      if (!predefinedRange && this.step === null) {
+      if (!predefinedRange && this.step == null) {
         this.step = 'selectStartDateCompare'
         this.$refs.startDateCompare.focus()
       }
     },
     selectDate: function(date) {
-      if (this.step === 'selectStartDate') {
+      if (this.step == 'selectStartDate') {
         this.startDate = date
-      } else if (this.step === 'selectEndDate') {
+      } else if (this.step == 'selectEndDate') {
         this.endDate = date
-      } else if (this.step === 'selectStartDateCompare') {
+      } else if (this.step == 'selectStartDateCompare') {
         this.startDateCompare = date
-      } else if (this.step === 'selectEndDateCompare') {
+      } else if (this.step == 'selectEndDateCompare') {
         this.endDateCompare = date
       }
     },
     // Step flow for date range selections
     nextStep: function() {
-      if (this.step === 'selectStartDate') {
+      if (this.step == 'selectStartDate') {
         this.step = 'selectEndDate'
         this.$refs.endDate.focus()
-      } else if (this.step === 'selectEndDate') {
+      } else if (this.step == 'selectEndDate') {
         this.step = null
         this.$refs.endDate.blur()
-      } else if (this.step === 'selectStartDateCompare') {
+
+        if (this.autoSubmit === true) {
+          this.submit();
+        }
+      } else if (this.step == 'selectStartDateCompare') {
         this.step = 'selectEndDateCompare'
         this.$refs.endDateCompare.focus()
-      } else if (this.step === 'selectEndDateCompare') {
+      } else if (this.step == 'selectEndDateCompare') {
         this.step = null
         this.$refs.endDateCompare.blur()
       }
     },
     // Try to update the step date from an input value
     inputDate: function(input) {
-      let date = moment.utc(input.target.value, 'YYYY-MM-DD')
+      let date = moment.utc(input.target.value, 'MM/DD/YYYY')
       if (date.isValid()) {
         this.selectDate(date)
       }
@@ -243,6 +291,7 @@ export default {
     },
     // Submit button
     submit: function() {
+      this.showCalendars = false;
       this.$emit('submit', {
         startDate: this.startDate,
         endDate: this.endDate,
@@ -254,10 +303,61 @@ export default {
     // Cancel button
     cancel: function() {
       this.$emit('cancel')
+      this.showCalendars = false;
     }
   },
   watch: {
+    // compare() {
+    //   if (this.compare === true) {
+    //     let rangeSelectCompare = this.defaultRangeSelectCompare
+
+    //     for (const rangeKey of Object.keys(this.ranges)) {
+    //       if (this.rangeSelect === rangeKey) {
+    //         this.rangeSelectCompare = rangeSelectCompare
+    //         return;
+    //       }
+    //       rangeSelectCompare = rangeKey
+    //     }
+    //   } else {
+    //     this.rangeSelectCompare = this.defaultRangeSelectCompare
+    //   }
+    // },
+    step: function() {
+      if (this.autoSubmit === true && this.step === null) {
+        this.submit();
+      } else {
+        this.showCalendars = true;
+      }
+    },
     rangeSelect: function(rangeKey) {
+      switch(this.rangeSelect) {
+        case 'today':
+          this.rangeSelectCompare = 'yesterday'
+          break;
+        case 'yesterday':
+          this.rangeSelectCompare = 'today'
+          break;
+        case 'thisWeek':
+          this.rangeSelectCompare = 'last7Days'
+          break;
+        case 'last7Days':
+          this.rangeSelectCompare = 'thisWeek'
+          break;
+        case 'thisMonth':
+          this.rangeSelectCompare = 'lastMonth'
+          break;
+        case 'lastMonth':
+          this.rangeSelectCompare = 'thisMonth'
+          break;
+        case 'thisYear':
+          this.rangeSelectCompare = 'lastYear'
+          break;
+        case 'lastYear':
+          this.rangeSelectCompare = 'thisYear'
+          break;
+        default:
+          this.rangeSelectCompare = this.defaultRangeSelectCompare
+      }
       this.selectRange(rangeKey)
     },
     rangeSelectCompare: function(rangeKey) {
@@ -271,7 +371,7 @@ export default {
         const range = this.ranges[rangeKey]
         if (this.startDate.isSame(range.startDate) && this.endDate.isSame(range.endDate)) {
           predefinedRange = true
-          if (this.rangeSelect !== rangeKey) {
+          if (this.rangeSelect != rangeKey) {
             this.rangeSelect = rangeKey
           }
         }
@@ -279,7 +379,7 @@ export default {
 
       // Custom range
       if (!predefinedRange) {
-        if (this.rangeSelect !== 'custom') {
+        if (this.rangeSelect != 'custom') {
           this.rangeSelect = 'custom'
         }
       }
@@ -292,7 +392,7 @@ export default {
         const range = this.ranges[rangeKey]
         if (this.startDateCompare.isSame(range.startDate) && this.endDateCompare.isSame(range.endDate)) {
           predefinedRange = true
-          if (this.rangeSelectCompare !== rangeKey) {
+          if (this.rangeSelectCompare != rangeKey) {
             this.rangeSelectCompare = rangeKey
           }
         }
@@ -300,7 +400,7 @@ export default {
 
       // Custom range
       if (!predefinedRange) {
-        if (this.rangeSelectCompare !== 'custom') {
+        if (this.rangeSelectCompare != 'custom') {
           this.rangeSelectCompare = 'custom'
         }
       }
@@ -308,13 +408,15 @@ export default {
   },
   filters: {
     dateFormat: function(value) {
-      return value ? value.format('YYYY-MM-DD') : ''
+      return value ? value.format('MM/DD/YYYY') : ''
     }
   },
   created: function() {
     // Initialize ranges
     this.rangeSelect = this.defaultRangeSelect
-    this.rangeSelectCompare = this.defaultRangeSelectCompare
+    if (this.autoSubmit === true) {
+      this.allowCompare = false;
+    }
   },
   components: { DateRangePickerCalendar, FontAwesomeIcon }
 }

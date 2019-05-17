@@ -47,6 +47,12 @@ export default {
 <date-range-picker v-on:submit="updateRanges" />
 ```
 
+### Browser
+
+```
+Vue.use(DateRangePicker)
+```
+
 ## API
 
 ### Events
@@ -69,19 +75,9 @@ Prop | Type | Default | Description
 
 ## Development
 
-### Project setup
 ```
 npm install
-```
-
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies
-```
-npm run build
+npm run dev
 ```
 
 ## Inspiration
